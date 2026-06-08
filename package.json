@@ -1,0 +1,19 @@
+{
+  "name": "okta-servicenow-api",
+  "version": "1.0.0",
+  "description": "ServiceNow Okta IdP Sync API - Netlify Serverless Functions",
+  "main": "netlify/functions/okta-endpoints.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "netlify dev"
+  },
+  "keywords": ["okta", "servicenow", "idp", "sync", "api"],
+  "author": "Avinash Choubey",
+  "license": "MIT",
+  "devDependencies": {
+    "netlify-cli": "^17.0.0"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
