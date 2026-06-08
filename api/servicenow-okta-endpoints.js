@@ -8,9 +8,9 @@
 
 // Helper function to generate mock member data
 function generateMembers(groupId, count) {
-  const firstNames = ["Alex", "Blake", "Casey", "Dakota", "Elena", "Finley", "Griffin", "Harper", "Indigo", "Jordan", "Kai", "Logan", "Morgan", "Noah", "Olivia", "Parker", "Quinn", "Riley", "Sage", "Taylor", "Unai", "Victor", "Whitney", "Xavier", "Yara", "Zara"];
-  const lastNames = ["Anderson", "Brown", "Chen", "Davis", "Evans", "Foster", "Garcia", "Harrison", "Ibrahim", "Johnson", "Khan", "Lee", "Martinez", "Nelson", "O'Brien", "Patel", "Quinn", "Rodriguez", "Singh", "Thomas", "Usman", "Vega", "Wang", "Xavier", "Yamamoto", "Zhao"];
-  const titles = ["Junior Developer", "Senior Developer", "Lead Architect", "DevOps Specialist", "Cloud Architect", "System Administrator", "Security Engineer", "Data Analyst", "Product Manager", "Technical Lead", "QA Engineer", "Solutions Architect", "Infrastructure Engineer", "Database Administrator", "Security Auditor"];
+  const firstNames = ["Alex", "Blake", "Casey", "Dakota", "Elena", "Finley", "Griffin", "Harper", "Indigo", "Jordan", "Kai", "Logan", "Morgan", "Noah", "Olivia", "Parker", "Quinn", "Riley", "Sage", "Taylor"];
+  const lastNames = ["Anderson", "Brown", "Chen", "Davis", "Evans", "Foster", "Garcia", "Harrison", "Ibrahim", "Johnson", "Khan", "Lee", "Martinez", "Nelson", "O'Brien", "Patel", "Quinn", "Rodriguez"];
+  const titles = ["Junior Developer", "Senior Developer", "Lead Architect", "DevOps Specialist", "Cloud Architect", "System Administrator", "Security Engineer", "Data Analyst", "Product Manager", "Technical Lead"];
   const departments = ["Engineering", "Operations", "Security", "Product", "Data", "Infrastructure", "Support", "Architecture", "Quality Assurance", "Platform"];
   
   const members = [];
@@ -137,6 +137,57 @@ function getOktaSyncPayload(req, res) {
     res.status(500).json({
       status: "error",
       error_code: "SYNC_ERROR",
+      message: error.message
+    });
+  }
+}
+
+/**
+ * GET /api/okta/complete-payload
+ * @description Get complete single payload with all groups and members (no pagination)
+ * @returns {object} - Complete payload containing all groups and their members
+ * 
+ * ServiceNow Use Case: Bulk import or initial sync with all data in one request
+ */
+function getCompleteOktaPayload(req, res) {
+  try {
+    const formattedGroups = payload.groups.map(group => ({
+      sys_id: group.group_id,
+      group_id: group.group_id,
+      group_name: group.group_name,
+      description: group.description,
+      active: group.active,
+      department: group.department,
+      cost_center: group.cost_center,
+      member_count: group.members.length,
+      members: group.members.map(m => ({
+        sys_id: m.user_id,
+        user_id: m.user_id,
+        first_name: m.first_name,
+        last_name: m.last_name,
+        email: m.email,
+        title: m.title,
+        department: m.department,
+        active: m.active,
+        hire_date: m.hire_date
+      }))
+    }));
+
+    res.status(200).json({
+      status: "success",
+      sync_metadata: {
+        ...payload.sync_metadata,
+        total_groups: payload.groups.length,
+        total_members: totalMembers,
+        export_type: "complete_payload"
+      },
+      groups: formattedGroups,
+      request_timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      error_code: "COMPLETE_PAYLOAD_ERROR",
       message: error.message
     });
   }
@@ -532,6 +583,7 @@ function getOktaHealth(req, res) {
     uptime: process.uptime(),
     endpoints_available: [
       "GET /api/okta/sync",
+      "GET /api/okta/complete-payload",
       "GET /api/okta/groups",
       "GET /api/okta/groups/:groupId",
       "GET /api/okta/users",
@@ -545,6 +597,7 @@ function getOktaHealth(req, res) {
 
 module.exports = {
   getOktaSyncPayload,
+  getCompleteOktaPayload,
   getAllOktaGroups,
   getOktaGroupById,
   getAllOktaUsers,
