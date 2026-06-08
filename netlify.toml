@@ -1,0 +1,10 @@
+# Netlify Configuration
+[build]
+  command = "npm install"
+  functions = "netlify/functions"
+  publish = "."
+
+# Function settings
+[functions."okta-endpoints"]
+  memory = 512
+  timeout = 10
