@@ -86,14 +86,15 @@ const totalMembers = payload.groups.reduce((sum, group) => sum + group.members.l
 
 // Netlify Function Handler
 exports.handler = async (event, context) => {
-  const path = event.path;
   const method = event.httpMethod;
   const queryParams = event.queryStringParameters || {};
-  const pathParams = event.pathParameters || {};
 
   try {
-    // Route: GET /api/okta/complete-payload
-    if (path === '/.netlify/functions/okta-endpoints' && method === 'GET' && queryParams.action === 'complete-payload') {
+    // Get action from query parameter
+    const action = queryParams.action;
+
+    // Route: GET complete-payload (all groups & members)
+    if (method === 'GET' && action === 'complete-payload') {
       const formattedGroups = payload.groups.map(group => ({
         sys_id: group.group_id,
         group_id: group.group_id,
@@ -133,8 +134,8 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Route: GET /api/okta/sync
-    if (path === '/.netlify/functions/okta-endpoints' && method === 'GET' && queryParams.action === 'sync') {
+    // Route: GET sync (with pagination)
+    if (method === 'GET' && action === 'sync') {
       const limit = Math.min(parseInt(queryParams.limit) || 100, 500);
       const offset = parseInt(queryParams.offset) || 0;
       
@@ -168,8 +169,8 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Route: GET /api/okta/health
-    if (method === 'GET' && queryParams.action === 'health') {
+    // Route: GET health
+    if (method === 'GET' && action === 'health') {
       return {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json' },
@@ -179,17 +180,17 @@ exports.handler = async (event, context) => {
           version: "1.0.0",
           timestamp: new Date().toISOString(),
           endpoints_available: [
-            "GET /.netlify/functions/okta-endpoints?action=sync",
-            "GET /.netlify/functions/okta-endpoints?action=complete-payload",
-            "GET /.netlify/functions/okta-endpoints?action=groups",
-            "GET /.netlify/functions/okta-endpoints?action=health"
+            "?action=sync&limit=100&offset=0",
+            "?action=complete-payload",
+            "?action=groups&active=true&department=Engineering",
+            "?action=health"
           ]
         })
       };
     }
 
-    // Route: GET /api/okta/groups
-    if (path === '/.netlify/functions/okta-endpoints' && method === 'GET' && queryParams.action === 'groups') {
+    // Route: GET groups
+    if (method === 'GET' && action === 'groups') {
       const { active, department } = queryParams;
       
       let groups = payload.groups;
@@ -227,18 +228,27 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Default response
+    // Default response - show available actions
     return {
-      statusCode: 400,
+      statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        status: "error",
-        message: "Invalid endpoint. Use ?action=sync, ?action=complete-payload, ?action=groups, or ?action=health"
+        status: "info",
+        message: "Okta Sync API - Use query parameters to access endpoints",
+        available_actions: [
+          "?action=health - Health check",
+          "?action=complete-payload - Get all groups and members",
+          "?action=sync&limit=100&offset=0 - Get groups with pagination",
+          "?action=groups&active=true - Get groups (filter by active/department)"
+        ]
       })
     };
 
   } catch (error) {
+    console.error('Error:', error);
     return {
       statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         status: "error",
         error_code: "SERVER_ERROR",
